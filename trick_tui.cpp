@@ -3,8 +3,6 @@
 
 #include "sniffer.h"
 
-
-
 int main(int argc, char *argv[]) {
     int sd; // socket descriptor
     std::set<Sniffer::SimBroadcast> vsset; // list of available variable servers
