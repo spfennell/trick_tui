@@ -1,45 +1,34 @@
 
-    #include <arpa/inet.h>
-    #include <stdio.h>
-    #include <iostream>
-    #include <string.h>
-    #include <stdlib.h>
-    #include <unistd.h>
-    #include <string>
-    #include <set>
-    #include <chrono>
-    
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <iostream>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <chrono>
 
-class SimBroadcast {    
-public:
-    SimBroadcast(char* host, char* port, char* sim_name, char* input_file ) : host(host), port(port), sim_name(sim_name), input_file(input_file){}
-    friend std::ostream& operator<<(std::ostream& os, const SimBroadcast& sb) {
-        os << sb.sim_name << "\thost: " << sb.host << "\tport: " << sb.port  << "\tinput_file: " << sb.input_file;
-        return os;
+#include "sniffer.h"
+
+Sniffer::SimBroadcast::SimBroadcast(char* host, char* port, char* sim_name, char* input_file ) : host(host), port(port), sim_name(sim_name), input_file(input_file){}
+
+std::ostream& operator<<(std::ostream& os, const Sniffer::SimBroadcast& sb) {
+    os << sb.sim_name << "\thost: " << sb.host << "\tport: " << sb.port  << "\tinput_file: " << sb.input_file;
+    return os;
+}
+
+bool operator==(const Sniffer::SimBroadcast& l, const Sniffer::SimBroadcast& r) {
+    return ((!l.host.compare(r.host)) && (!l.port.compare(r.port)));
+}
+
+bool operator<(const Sniffer::SimBroadcast& l, const Sniffer::SimBroadcast& r) {
+    int compare = l.host.compare(r.host);
+    if(!compare) {
+        return l.port.compare(r.port) < 0;
     }
+    return compare < 0;
+}
 
-    friend bool operator==(const SimBroadcast& l, const SimBroadcast& r) {
-        return ((!l.host.compare(r.host)) && (!l.port.compare(r.port)));
-    }
-
-    friend bool operator<(const SimBroadcast& l, const SimBroadcast& r) {
-        int compare = l.host.compare(r.host);
-        if(!compare) {
-            return l.port.compare(r.port) < 0;
-        }
-        return compare < 0;
-    }
-
-private:
-    std::string host;
-    std::string port;
-    std::string sim_name;
-    std::string input_file;
-
-    // other fields not needed for the application. Feel free to add them in.
-};
-
-static inline int init_multicast_socket(const char* addr, int port) {
+int Sniffer::init_multicast_socket(const char* addr, int port) {
     struct sockaddr_in localSock = {0};
     struct ip_mreq group = {0};
     int sd;
@@ -80,7 +69,7 @@ static inline int init_multicast_socket(const char* addr, int port) {
     return sd;
 }
 
-static inline char* getSimNameFromPath(char* path) {
+char* Sniffer::getSimNameFromPath(char* path) {
         char* sim_name = NULL;
         char* tok = strtok(path, "/");
         while(tok != NULL) {
@@ -92,7 +81,7 @@ static inline char* getSimNameFromPath(char* path) {
         return sim_name;
 }
 
-static inline void parse_broadcast(char* info[10], char* databuf) {
+void Sniffer::parse_broadcast(char* info[10], char* databuf) {
     char* tok = strtok(databuf, "\n  \t");
     for(int i = 0; tok != NULL && i < 10; i++) {
         info[i] = tok;
@@ -100,7 +89,7 @@ static inline void parse_broadcast(char* info[10], char* databuf) {
     }
 }
 
-static inline void get_list(std::set<SimBroadcast> &vsset, const int sd) {
+void Sniffer::get_list(std::set<SimBroadcast> &vsset, const int sd) {
     char databuf[1024];
     /* Read from the socket. */
     int datalen = sizeof(databuf);
@@ -116,23 +105,7 @@ static inline void get_list(std::set<SimBroadcast> &vsset, const int sd) {
         char* info[10];
         parse_broadcast(info, databuf);
         char* sim_name = getSimNameFromPath(info[4]);
-        SimBroadcast sb(info[0], info[1], sim_name, info[6]);
+        Sniffer::SimBroadcast sb(info[0], info[1], sim_name, info[6]);
         vsset.insert(sb);
     }   
-}
-
-int main(int argc, char *argv[]) {
-    int sd; // socket descriptor
-    std::set<SimBroadcast> vsset; // list of available variable servers
-
-    std::cout << "gathering data..." << std::endl; 
-    sd = init_multicast_socket("239.3.14.15", 9265);
-    get_list(vsset, sd);
-    std::cout << "----- Sim Info -----" << std::endl; 
-    for(auto it = vsset.begin(); it != vsset.end(); ++it) {
-        std::cout << *it << std::endl;
-    }
-
-    close(sd);
-    return 0;
 }
