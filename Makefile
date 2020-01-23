@@ -9,7 +9,7 @@ sniffer.o: sniffer.cpp sniffer.h
 	$(CC) $(WFLAGS) -c $< -o $@
 
 trick_tui.o: trick_tui.cpp sniffer.h
-	$(CC) $(WFLAGS) -c $< -lncurses -lmenu  -o $@
+	$(CC) $(WFLAGS) -c $< -o $@
 
 clean:
 	rm trick-tui $(OBJECTS)
