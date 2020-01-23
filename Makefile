@@ -1,9 +1,10 @@
 CC = g++
 WFLAGS = -Wall -Wextra -pedantic -Werror -Wno-missing-field-initializers
 OBJECTS = sniffer.o trick_tui.o
+LFLAGS = -lncurses -lmenu
 
 trick-tui : $(OBJECTS)
-	$(CC) $(WFLAGS) $? -lncurses -lmenu -o $@
+	$(CC) $(WFLAGS) $? $(LFLAGS) -o $@
 
 sniffer.o: sniffer.cpp sniffer.h
 	$(CC) $(WFLAGS) -c $< -o $@
