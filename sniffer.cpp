@@ -8,18 +8,21 @@
 
 #include "sniffer.h"
 
-Sniffer::SimBroadcast::SimBroadcast(char* host, char* port, char* sim_name, char* input_file ) : host(host), port(port), sim_name(sim_name), input_file(input_file){}
+Sniffer::SimBroadcast::SimBroadcast(char* host, char* port, char* sim_name, char* input_file ) : host(host), port(port), sim_name(sim_name), input_file(input_file), c_str{0} { 
+    std::string s = this->sim_name + " " + this->host + " " + this->port + " " + this->input_file;
+    memcpy(c_str, s.c_str(), s.length() + 1 < 128 ? s.length() + 1 : 127);
+}
 
-std::ostream& operator<<(std::ostream& os, const Sniffer::SimBroadcast& sb) {
+std::ostream& Sniffer::operator<<(std::ostream& os, const Sniffer::SimBroadcast& sb) {
     os << sb.sim_name << "\thost: " << sb.host << "\tport: " << sb.port  << "\tinput_file: " << sb.input_file;
     return os;
 }
 
-bool operator==(const Sniffer::SimBroadcast& l, const Sniffer::SimBroadcast& r) {
+bool Sniffer::operator==(const Sniffer::SimBroadcast& l, const Sniffer::SimBroadcast& r) {
     return ((!l.host.compare(r.host)) && (!l.port.compare(r.port)));
 }
 
-bool operator<(const Sniffer::SimBroadcast& l, const Sniffer::SimBroadcast& r) {
+bool Sniffer::operator<(const Sniffer::SimBroadcast& l, const Sniffer::SimBroadcast& r) {
     int compare = l.host.compare(r.host);
     if(!compare) {
         return l.port.compare(r.port) < 0;
@@ -47,7 +50,7 @@ int Sniffer::init_multicast_socket(const char* addr, int port) {
     /* specified as INADDR_ANY. */
     memset((char *) &localSock, 0, sizeof(localSock));
     localSock.sin_family = AF_INET;
-    localSock.sin_port = htons(9265);
+    localSock.sin_port = htons(port);
     localSock.sin_addr.s_addr = INADDR_ANY;
     if(bind(sd, (struct sockaddr*)&localSock, sizeof(localSock))) {
         perror("Binding datagram socket error");
@@ -58,7 +61,7 @@ int Sniffer::init_multicast_socket(const char* addr, int port) {
     /* interface. Note that this IP_ADD_MEMBERSHIP option must be */
     /* called for each local interface over which the multicast */
     /* datagrams are to be received. */
-    group.imr_multiaddr.s_addr = inet_addr("239.3.14.15");
+    group.imr_multiaddr.s_addr = inet_addr(addr);
     //group.imr_interface.s_addr = inet_addr("239.3.14.15");
     if(setsockopt(sd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0) {
         perror("Adding multicast group error");
@@ -92,7 +95,6 @@ void Sniffer::get_list(std::set<SimBroadcast> &vsset, const int sd) {
     char databuf[1024];
     /* Read from the socket. */
     int datalen = sizeof(databuf);
-    int pass = 2;
     auto start = std::chrono::system_clock::now();
     // while for two seconds
     while((std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start)).count() < 2.0) {
